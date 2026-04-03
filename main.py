@@ -66,19 +66,17 @@ def animate_sequence(frames, delay=0.15, final_pause=False):
 
 
 def render_title_art():
-    print(r"""
-  ____             _                     _ _
- |  _ \            | |                   | (_)
- | |_) | __ _ _ __ | | ____ _  __ _  __ _| |_ _ __   __ _
- |  _ < / _` | '_ \| |/ / _` |/ _` |/ _` | | | '_ \ / _` |
- | |_) | (_| | | | |   < (_| | (_| | (_| | | | | | | (_| |
- |____/ \__,_|_| |_|_|\_\__,_|\__, |\__,_|_|_|_| |_|\__, |
-                               __/ |                 __/ |
-                              |___/                 |___/
-    """)
-    print("""
-                         B A T T L E   D I M E N S I O N
-    """)
+        print(r"""
+     ____   ___    _    _   _  _   _   ____   _____   ____   ______   _   _
+    | __ ) / _ \  | |  | | | || | | | / ___| | ____| |  _ \ |___  /  | | | |
+    |  _ \| | | | | |  | | | || |_| || |  _  |  _|   | |_) |  / /   | |_| |
+    | |_) | |_| | | |__| | |__   _  || |_| | | |___  |  _ <  / /_   |  _  |
+    |____/ \___/   \____/     |_| |_| \____| |_____| |_| \_\/____|  |_| |_|
+        """)
+        print("""
+                                     B A K U G A N   :   B A T T L E   D I M E N S I O N
+                                I N   S H A D O W   A N D   S I L V E R   T O N E S
+        """)
 
 
 def render_battle_banner(trainer_one, trainer_two, battle):
@@ -475,6 +473,9 @@ def build_gate_cards():
 def show_main_menu():
     clear_screen()
     render_title_art()
+    print("""
+                     A N I M A T E   B A T T L E   P R O J E C T
+    """)
     print(line("-"))
     print("1. Start Battle")
     print("2. Instructions")
@@ -511,6 +512,27 @@ def show_instructions():
     print("- Use shields before taking a hard hit.")
     print("- Revive is strongest when you are down to your last few Bakugan.")
     pause()
+
+
+def battle_intro(trainer_one, trainer_two, battle):
+    frames = [
+        f"{trainer_one.name} steps into the arena...",
+        f"{trainer_two.name} steps into the arena...",
+        f"GATE CARD: {battle.gate_card.name}",
+        f"{trainer_one.active().name} faces {trainer_two.active().name}",
+        "The battle dimension locks in.",
+    ]
+    animate_sequence(frames, delay=0.45)
+
+
+def victory_splash(message):
+    frames = [
+        message,
+        f"{message} ",
+        f"{message}  ",
+        f"{message}   ",
+    ]
+    animate_sequence(frames, delay=0.18)
 
 
 def show_credits():
@@ -681,6 +703,8 @@ def battle_match(trainer_one, trainer_two):
     trainers = [trainer_one, trainer_two]
     round_index = 0
 
+    battle_intro(trainer_one, trainer_two, battle)
+
     while trainer_one.has_available() and trainer_two.has_available():
         battle.gate_card = gate_deck[round_index % len(gate_deck)]
         battle.round_number = round_index + 1
@@ -721,18 +745,18 @@ def battle_match(trainer_one, trainer_two):
     clear_screen()
     header("FINAL JUDGMENT")
     if trainer_one.has_available() and not trainer_two.has_available():
-        print(f"Victory goes to {trainer_one.name}!")
+        victory_splash(f"Victory goes to {trainer_one.name}!")
     elif trainer_two.has_available() and not trainer_one.has_available():
-        print(f"Victory goes to {trainer_two.name}!")
+        victory_splash(f"Victory goes to {trainer_two.name}!")
     else:
         one_hp = sum(bakugan.health for bakugan in trainer_one.team)
         two_hp = sum(bakugan.health for bakugan in trainer_two.team)
         if one_hp > two_hp:
-            print(f"Victory goes to {trainer_one.name} by total remaining power!")
+            victory_splash(f"Victory goes to {trainer_one.name} by total remaining power!")
         elif two_hp > one_hp:
-            print(f"Victory goes to {trainer_two.name} by total remaining power!")
+            victory_splash(f"Victory goes to {trainer_two.name} by total remaining power!")
         else:
-            print("The battle ends in a draw.")
+            victory_splash("The battle ends in a draw.")
 
     print("\nBattle summary:")
     trainer_one.summary()
