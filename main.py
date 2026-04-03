@@ -127,6 +127,24 @@ def animate_status_shift(message):
     animate_sequence(frames, delay=0.08)
 
 
+def play_sound(tag, detail=""):
+    suffix = f" - {detail}" if detail else ""
+    print(f"[SFX] {tag}{suffix}")
+
+
+def play_impact_sound(kind="hit"):
+    sound_map = {
+        "hit": "THUD",
+        "crit": "KRAK",
+        "heal": "SHIIINE",
+        "shield": "WHUM",
+        "burn": "FWOOSH",
+        "energy": "VMMM",
+        "stun": "BZZT",
+    }
+    play_sound(sound_map.get(kind, "THUD"))
+
+
 def ask_choice(prompt, options):
     normalized = {str(index + 1): option for index, option in enumerate(options)}
     while True:
@@ -277,12 +295,14 @@ class Bakugan:
 
     def use_basic_attack(self, other, trainer, battle):
         if self.energy < 1:
+            play_sound("DRIFT", f"{self.name} is out of energy")
             print(f"{self.name} is too low on energy. It regains 1 energy instead.")
             self.gain_energy(1)
             return
 
         self.energy -= 1
         damage = self.basic_attack_damage(other, trainer, battle)
+        play_impact_sound("hit")
         animate_attack(self.name, other.name, "BATTLE CLAW")
         print(f"{self.name} uses a basic attack on {other.name} for {damage} damage.")
         other.take_damage(damage)
@@ -295,10 +315,12 @@ class Bakugan:
         ability = self.abilities[index]
         cost = max(1, ability.cost - (1 if trainer.character.discount_attribute == self.attribute else 0))
         if self.energy < cost:
+            play_sound("DRIFT", f"{self.name} cannot pay the energy cost")
             print(f"Not enough energy for {ability.name}.")
             return
 
         self.energy -= cost
+        play_sound("CALL", ability.name)
         animate_attack(self.name, other.name, ability.name)
         print(f"{self.name} uses {ability.name}: {ability.description}")
 
@@ -307,25 +329,31 @@ class Bakugan:
             damage = int(damage * battle.gate_card.attack_bonus.get(self.attribute, 1.0))
             if trainer.character.attack_bonus_attribute == self.attribute:
                 damage = int(damage * trainer.character.attack_bonus_multiplier)
+            play_impact_sound("crit" if damage >= other.health else "hit")
             other.take_damage(damage)
         elif ability.kind == "heal":
             heal_amount = ability.power + trainer.character.heal_bonus
+            play_impact_sound("heal")
             animate_status_shift(f"{self.name} channels recovery energy")
             self.heal(heal_amount)
             print(f"{self.name} healed {heal_amount} HP.")
         elif ability.kind == "shield":
+            play_impact_sound("shield")
             animate_status_shift(f"{self.name} raises a guard barrier")
             self.shield_turns += 1
             print(f"{self.name} gained a shield.")
         elif ability.kind == "stun":
+            play_impact_sound("stun")
             animate_status_shift(f"{other.name} is trapped by the hit")
             other.stun_turns += 1
             print(f"{other.name} is stunned.")
         elif ability.kind == "burn":
+            play_impact_sound("burn")
             animate_status_shift(f"{other.name} is engulfed in heat")
             other.burn_turns += 2
             print(f"{other.name} is burning.")
         elif ability.kind == "energy":
+            play_impact_sound("energy")
             animate_status_shift(f"{self.name} gathers energy from the gate")
             self.gain_energy(ability.power)
             print(f"{self.name} regained {ability.power} energy.")
@@ -610,19 +638,23 @@ def use_item(trainer):
     active = trainer.active()
 
     if item == "Potion":
+        play_sound("CHIME", "Potion")
         amount = 18 + trainer.character.heal_bonus
         active.heal(amount)
         trainer.items[item] -= 1
         print(f"{active.name} recovered {amount} HP.")
     elif item == "Shield":
+        play_sound("WHUM", "Shield")
         active.shield_turns += 1
         trainer.items[item] -= 1
         print(f"{active.name} is protected by a shield.")
     elif item == "Energy Drink":
+        play_sound("VMMM", "Energy Drink")
         active.gain_energy(3)
         trainer.items[item] -= 1
         print(f"{active.name} gained 3 energy.")
     elif item == "Revive":
+        play_sound("SHIIINE", "Revive")
         knocked_out = [index for index, bakugan in enumerate(trainer.team) if not bakugan.is_alive()]
         if not knocked_out:
             print("No knocked out Bakugan to revive.")
@@ -708,6 +740,7 @@ def battle_match(trainer_one, trainer_two):
     while trainer_one.has_available() and trainer_two.has_available():
         battle.gate_card = gate_deck[round_index % len(gate_deck)]
         battle.round_number = round_index + 1
+        play_sound("ROUND START", f"{battle.gate_card.name}")
 
         for trainer in trainers:
             trainer.active().gain_energy(battle.gate_card.energy_bonus)
