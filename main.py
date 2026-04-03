@@ -364,6 +364,7 @@ class Trainer:
     name: str
     character: Character
     team: list[Bakugan]
+    is_ai: bool = False
 
     def __post_init__(self):
         self.active_index = 0
@@ -506,11 +507,12 @@ def show_main_menu():
     """)
     print(line("-"))
     print("1. Start Battle")
-    print("2. Instructions")
-    print("3. Credits")
-    print("4. Exit")
+    print("2. Story Mode")
+    print("3. Instructions")
+    print("4. Credits")
+    print("5. Exit")
     print(line("-"))
-    return ask_choice("", ["Start Battle", "Instructions", "Credits", "Exit"])
+    return ask_choice("", ["Start Battle", "Story Mode", "Instructions", "Credits", "Exit"])
 
 
 def show_instructions():
@@ -551,6 +553,16 @@ def battle_intro(trainer_one, trainer_two, battle):
         "The battle dimension locks in.",
     ]
     animate_sequence(frames, delay=0.45)
+
+
+def battle_story_intro(player_trainer, enemy_trainer, battle, story_text):
+    frames = [
+        story_text,
+        f"{player_trainer.name} prepares for battle...",
+        f"{enemy_trainer.name} steps into the arena...",
+        f"GATE CARD: {battle.gate_card.name}",
+    ]
+    animate_sequence(frames, delay=0.55)
 
 
 def victory_splash(message):
@@ -674,31 +686,110 @@ def use_item(trainer):
         print(f"{target.name} has returned to the battle at half power.")
 
 
-def battle_turn(attacker, defender, battle):
+def ai_choose_action(attacker, defender):
+    active = attacker.active()
+    enemy = defender.active()
+    if active.health <= active.max_health // 3 and attacker.items.get("Potion", 0) > 0:
+        return 3
+    if active.energy >= 3 and any(ability.kind in {"damage", "burn", "stun"} for ability in active.abilities):
+        return 2
+    if active.health <= active.max_health // 4 and len(attacker.available_indices()) > 1:
+        return 4
+    if attacker.items.get("Shield", 0) > 0 and active.health <= active.max_health // 2:
+        return 3
+    if active.energy == 0:
+        return 1
+    if enemy.health <= active.power * 2:
+        return 2 if active.energy >= 2 else 1
+    return 1
+
+
+def ai_choose_ability_index(attacker, defender):
+    active = attacker.active()
+    affordable = []
+    for index, ability in enumerate(active.abilities):
+        cost = max(1, ability.cost - (1 if attacker.character.discount_attribute == active.attribute else 0))
+        if active.energy >= cost:
+            score = ability.power
+            if ability.kind == "damage":
+                score += 8
+            elif ability.kind == "burn":
+                score += 6
+            elif ability.kind == "stun":
+                score += 7
+            elif ability.kind == "heal" and active.health <= active.max_health // 2:
+                score += 5
+            elif ability.kind == "shield" and active.health <= active.max_health // 2:
+                score += 4
+            affordable.append((score, index))
+    if not affordable:
+        return 0
+    affordable.sort(reverse=True)
+    return affordable[0][1]
+
+
+def ai_choose_item(trainer):
+    active = trainer.active()
+    if trainer.items.get("Potion", 0) > 0 and active.health <= active.max_health // 2:
+        return "Potion"
+    if trainer.items.get("Shield", 0) > 0 and active.health <= active.max_health // 3:
+        return "Shield"
+    if trainer.items.get("Energy Drink", 0) > 0 and active.energy <= 1:
+        return "Energy Drink"
+    if trainer.items.get("Revive", 0) > 0 and any(not bakugan.is_alive() for bakugan in trainer.team):
+        return "Revive"
+    return "Potion" if trainer.items.get("Potion", 0) > 0 else "Shield"
+
+
+def ai_choose_switch(trainer):
+    options = trainer.available_indices()
+    if len(options) <= 1:
+        return
+    best_index = max(options, key=lambda index: trainer.team[index].health + trainer.team[index].energy * 2)
+    trainer.active_index = best_index
+    print(f"{trainer.name} switches to {trainer.active().name}.")
+
+
+def battle_turn(attacker, defender, battle, is_ai=False):
     active = attacker.active()
     if active.stun_turns > 0:
         active.stun_turns -= 1
         print(f"{active.name} is stunned and misses the turn.")
         return
 
-    action = choose_action(attacker)
+    action = ai_choose_action(attacker, defender) if is_ai else choose_action(attacker)
     if action == 1:
         active.use_basic_attack(defender.active(), attacker, battle)
     elif action == 2:
-        section(f"{active.name} - Abilities")
-        for index, ability in enumerate(active.abilities, start=1):
-            print(f"{index}. {ability.name} | Cost {ability.cost} | {ability.description}")
-        ability_choice = ask_int("Choose an ability: ", 1, len(active.abilities)) - 1
+        if is_ai:
+            ability_choice = ai_choose_ability_index(attacker, defender)
+        else:
+            section(f"{active.name} - Abilities")
+            for index, ability in enumerate(active.abilities, start=1):
+                print(f"{index}. {ability.name} | Cost {ability.cost} | {ability.description}")
+            ability_choice = ask_int("Choose an ability: ", 1, len(active.abilities)) - 1
         active.use_ability(ability_choice, defender.active(), attacker, battle)
     elif action == 3:
-        use_item(attacker)
+        if is_ai:
+            selected_item = ai_choose_item(attacker)
+            if selected_item == "Revive":
+                print(f"{attacker.name} uses Revive.")
+            use_item(attacker)
+        else:
+            use_item(attacker)
     elif action == 4:
-        attacker.choose_active()
+        if is_ai:
+            ai_choose_switch(attacker)
+        else:
+            attacker.choose_active()
     elif action == 5:
-        clear_screen()
-        header(f"{attacker.name}'s Team Overview")
-        attacker.summary()
-        pause()
+        if is_ai:
+            active.use_basic_attack(defender.active(), attacker, battle)
+        else:
+            clear_screen()
+            header(f"{attacker.name}'s Team Overview")
+            attacker.summary()
+            pause()
 
     if defender.active().health <= 0:
         defender.auto_switch_if_needed()
@@ -728,14 +819,17 @@ def determine_turn_order(first, second, battle):
     return (first, second) if first_score >= second_score else (second, first)
 
 
-def battle_match(trainer_one, trainer_two):
+def battle_match(trainer_one, trainer_two, opening_text=None):
     gate_deck = build_gate_cards()
     random.shuffle(gate_deck)
     battle = BattleState(gate_card=gate_deck[0])
     trainers = [trainer_one, trainer_two]
     round_index = 0
 
-    battle_intro(trainer_one, trainer_two, battle)
+    if opening_text:
+        battle_story_intro(trainer_one, trainer_two, battle, opening_text)
+    else:
+        battle_intro(trainer_one, trainer_two, battle)
 
     while trainer_one.has_available() and trainer_two.has_available():
         battle.gate_card = gate_deck[round_index % len(gate_deck)]
@@ -766,7 +860,7 @@ def battle_match(trainer_one, trainer_two):
             if current.active().health <= 0:
                 current.auto_switch_if_needed()
                 continue
-            battle_turn(current, opponent, battle)
+            battle_turn(current, opponent, battle, is_ai=current.is_ai)
             if not opponent.has_available():
                 break
 
@@ -798,6 +892,79 @@ def battle_match(trainer_one, trainer_two):
     pause()
 
 
+def build_story_opponents():
+    roster = build_roster()
+    characters = build_characters()
+    return [
+        {
+            "name": "Alpha Team Commander",
+            "character": characters[5],
+            "team": [roster[5].clone(), roster[10].clone(), roster[14].clone()],
+            "text": "A silent challenger emerges from the stone arena.",
+        },
+        {
+            "name": "Shadow Rival",
+            "character": characters[6],
+            "team": [roster[7].clone(), roster[8].clone(), roster[9].clone()],
+            "text": "Darkus power gathers at the edge of the battlefield.",
+        },
+        {
+            "name": "Grand Arena Champion",
+            "character": characters[7],
+            "team": [roster[1].clone(), roster[3].clone(), roster[11].clone()],
+            "text": "The final champion steps forward under the arena lights.",
+        },
+    ]
+
+
+def story_mode():
+    clear_screen()
+    header("STORY MODE")
+    print("A campaign path with named rivals, dialogue, and escalating battle difficulty.")
+    print("Win every match to claim the arena title.")
+    pause()
+
+    player_name = input("Enter your trainer name: ").strip() or "Bakugan Brawler"
+    characters = build_characters()
+    player_character = select_character(characters, f"{player_name} - Choose Your Character")
+    roster = build_roster()
+    team = draft_team(player_name, roster, 3)
+    player_trainer = Trainer(player_name, player_character, team)
+
+    opponents = build_story_opponents()
+    for stage_number, opponent_data in enumerate(opponents, start=1):
+        clear_screen()
+        header(f"CAMPAIGN STAGE {stage_number}")
+        print(opponent_data["text"])
+        print(f"Opponent: {opponent_data['name']} ({opponent_data['character'].name})")
+        pause()
+
+        enemy_trainer = Trainer(opponent_data["name"], opponent_data["character"], [bakugan.clone() for bakugan in opponent_data["team"]], is_ai=True)
+        battle_match(player_trainer, enemy_trainer, opening_text=opponent_data["text"])
+
+        if not player_trainer.has_available():
+            clear_screen()
+            header("CAMPAIGN FAILED")
+            print("Your Bakugan team has fallen. The campaign ends here.")
+            pause()
+            return
+
+        if stage_number < len(opponents):
+            for bakugan in player_trainer.team:
+                if bakugan.is_alive():
+                    bakugan.heal(12)
+                    bakugan.gain_energy(1)
+            clear_screen()
+            header("STAGE CLEARED")
+            print("Your surviving Bakugan recover a little before the next battle.")
+            pause()
+
+    clear_screen()
+    header("CAMPAIGN CLEARED")
+    print("You defeated every rival and claimed the arena.")
+    pause()
+
+
 def setup_match():
     clear_screen()
     header("NEW BATTLE")
@@ -823,6 +990,8 @@ def main():
         choice = show_main_menu()
         if choice == "Start Battle":
             setup_match()
+        elif choice == "Story Mode":
+            story_mode()
         elif choice == "Instructions":
             show_instructions()
         elif choice == "Credits":
