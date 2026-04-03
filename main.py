@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import os
 import random
+import time
 from dataclasses import dataclass, field
 
 
@@ -25,6 +26,10 @@ def pause(message="Press Enter to continue..."):
     input(f"\n{message}")
 
 
+def wait(duration=0.12):
+    time.sleep(duration)
+
+
 def line(char="=", width=76):
     return char * width
 
@@ -38,6 +43,90 @@ def header(title):
 def section(title):
     print("\n" + title)
     print("-" * len(title))
+
+
+def cinematic_frame(top_text, middle_text="", bottom_text=""):
+    clear_screen()
+    print(line())
+    print(top_text.center(76))
+    if middle_text:
+        print(middle_text.center(76))
+    if bottom_text:
+        print(bottom_text.center(76))
+    print(line())
+
+
+def animate_sequence(frames, delay=0.15, final_pause=False):
+    for frame in frames:
+        clear_screen()
+        print(frame)
+        wait(delay)
+    if final_pause:
+        pause()
+
+
+def render_title_art():
+    print(r"""
+  ____             _                     _ _
+ |  _ \            | |                   | (_)
+ | |_) | __ _ _ __ | | ____ _  __ _  __ _| |_ _ __   __ _
+ |  _ < / _` | '_ \| |/ / _` |/ _` |/ _` | | | '_ \ / _` |
+ | |_) | (_| | | | |   < (_| | (_| | (_| | | | | | | (_| |
+ |____/ \__,_|_| |_|_|\_\__,_|\__, |\__,_|_|_|_| |_|\__, |
+                               __/ |                 __/ |
+                              |___/                 |___/
+    """)
+    print("""
+                         B A T T L E   D I M E N S I O N
+    """)
+
+
+def render_battle_banner(trainer_one, trainer_two, battle):
+    clear_screen()
+    print(line())
+    print(f"ROUND {battle.round_number} - {battle.gate_card.name}".center(76))
+    print(line())
+    print(f"GATE CARD: {battle.gate_card.description}")
+    print(line("-"))
+    left = f"{trainer_one.name} [{trainer_one.character.name}]"
+    right = f"{trainer_two.name} [{trainer_two.character.name}]"
+    print(left.ljust(38) + right.rjust(38))
+    print(f"{trainer_one.active().name} vs {trainer_two.active().name}".center(76))
+    print(line("-"))
+
+
+def animate_bakugan_entry(bakugan, side="left"):
+    slides = [
+        f"[{bakugan.name}]",
+        f"    [{bakugan.name}]",
+        f"        [{bakugan.name}]",
+        f"            [{bakugan.name}]",
+        f"                [{bakugan.name}]",
+    ]
+    if side == "right":
+        slides = [frame.rjust(76) for frame in slides]
+    animate_sequence(slides, delay=0.08)
+
+
+def animate_attack(attacker_name, defender_name, move_name):
+    frames = [
+        f"{attacker_name} prepares {move_name}",
+        f"{attacker_name} >>>                {defender_name}",
+        f"{attacker_name} >>>>>>>>>>>>       {defender_name}",
+        f"{attacker_name} >>>>>>>>>>>>>>>>>>> {defender_name}",
+        f"{defender_name} reels from the impact!",
+    ]
+    animate_sequence(frames, delay=0.09)
+
+
+def animate_status_shift(message):
+    frames = [
+        message,
+        f"{message}.",
+        f"{message}..",
+        f"{message}...",
+    ]
+    animate_sequence(frames, delay=0.08)
 
 
 def ask_choice(prompt, options):
@@ -196,6 +285,7 @@ class Bakugan:
 
         self.energy -= 1
         damage = self.basic_attack_damage(other, trainer, battle)
+        animate_attack(self.name, other.name, "BATTLE CLAW")
         print(f"{self.name} uses a basic attack on {other.name} for {damage} damage.")
         other.take_damage(damage)
 
@@ -211,6 +301,7 @@ class Bakugan:
             return
 
         self.energy -= cost
+        animate_attack(self.name, other.name, ability.name)
         print(f"{self.name} uses {ability.name}: {ability.description}")
 
         if ability.kind == "damage":
@@ -221,18 +312,23 @@ class Bakugan:
             other.take_damage(damage)
         elif ability.kind == "heal":
             heal_amount = ability.power + trainer.character.heal_bonus
+            animate_status_shift(f"{self.name} channels recovery energy")
             self.heal(heal_amount)
             print(f"{self.name} healed {heal_amount} HP.")
         elif ability.kind == "shield":
+            animate_status_shift(f"{self.name} raises a guard barrier")
             self.shield_turns += 1
             print(f"{self.name} gained a shield.")
         elif ability.kind == "stun":
+            animate_status_shift(f"{other.name} is trapped by the hit")
             other.stun_turns += 1
             print(f"{other.name} is stunned.")
         elif ability.kind == "burn":
+            animate_status_shift(f"{other.name} is engulfed in heat")
             other.burn_turns += 2
             print(f"{other.name} is burning.")
         elif ability.kind == "energy":
+            animate_status_shift(f"{self.name} gathers energy from the gate")
             self.gain_energy(ability.power)
             print(f"{self.name} regained {ability.power} energy.")
 
@@ -378,24 +474,42 @@ def build_gate_cards():
 
 def show_main_menu():
     clear_screen()
-    header("BAKUGAN: BATTLE DIMENSION")
+    render_title_art()
+    print(line("-"))
     print("1. Start Battle")
-    print("2. How to Play")
+    print("2. Instructions")
     print("3. Credits")
     print("4. Exit")
     print(line("-"))
-    return ask_choice("", ["Start Battle", "How to Play", "Credits", "Exit"])
+    return ask_choice("", ["Start Battle", "Instructions", "Credits", "Exit"])
 
 
-def show_how_to_play():
+def show_instructions():
     clear_screen()
-    header("HOW TO PLAY")
-    print("- Choose a Bakugan character with a passive bonus.")
-    print("- Draft 3 Bakugan for your team from the shared roster.")
-    print("- Each turn, you can attack, use an ability, use an item, or switch Bakugan.")
-    print("- Gate Cards change the battlefield every round and affect damage.")
-    print("- Abilities cost energy. Your Bakugan regenerates energy over time.")
-    print("- Win by knocking out all opposing Bakugan.")
+    header("INSTRUCTIONS")
+    print("This game is a turn-based Bakugan battle simulator inspired by the anime.")
+    print()
+    print("SETUP")
+    print("- Enter player names.")
+    print("- Choose one character per player for passive bonuses.")
+    print("- Draft 3 Bakugan each from the shared roster.")
+    print()
+    print("BATTLE FLOW")
+    print("- Each round opens on a Gate Card with its own effects.")
+    print("- Faster Bakugan usually act first.")
+    print("- On your turn you may attack, use an ability, use an item, switch Bakugan, or view your team.")
+    print("- Basic attacks cost 1 energy.")
+    print("- Abilities cost more energy, but can heal, stun, burn, shield, or deal heavier damage.")
+    print()
+    print("WINNING")
+    print("- Knock out every Bakugan on the opposing team to win.")
+    print("- If both sides fall at the same time, total remaining team power breaks the tie.")
+    print()
+    print("TIPS")
+    print("- Use type advantage: Pyrus > Aquos > Subterra > Ventus > Darkus > Haos > Pyrus.")
+    print("- Save energy for stronger abilities when the match gets close.")
+    print("- Use shields before taking a hard hit.")
+    print("- Revive is strongest when you are down to your last few Bakugan.")
     pause()
 
 
@@ -543,7 +657,7 @@ def render_battle_status(trainers, battle):
     print(line("-"))
     for trainer in trainers:
         active = trainer.active()
-        print(f"{trainer.name} as {trainer.character.name}")
+        print(f"{trainer.name} as {trainer.character.name} ({trainer.character.title})")
         print(f"Active: {active.card()}")
         print(f"Status: {active.status_line()}")
         print(f"Items: {trainer.items}")
@@ -576,6 +690,8 @@ def battle_match(trainer_one, trainer_two):
 
         render_battle_status(trainers, battle)
         print(f"Gate effect: {battle.gate_card.description}")
+        animate_bakugan_entry(trainer_one.active(), "left")
+        animate_bakugan_entry(trainer_two.active(), "right")
         pause("Press Enter to start the round...")
 
         first, second = determine_turn_order(trainer_one, trainer_two, battle)
@@ -650,8 +766,8 @@ def main():
         choice = show_main_menu()
         if choice == "Start Battle":
             setup_match()
-        elif choice == "How to Play":
-            show_how_to_play()
+        elif choice == "Instructions":
+            show_instructions()
         elif choice == "Credits":
             show_credits()
         elif choice == "Exit":

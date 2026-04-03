@@ -1,9 +1,10 @@
 # Bakugan: Battle Dimension
 
-A Python Bakugan battle game with a full menu, character passives, team drafting, gate cards, energy-based abilities, items, and turn-based battle strategy.
+A Python Bakugan battle game with a full menu, character passives, team drafting, gate cards, energy-based abilities, items, cinematic battle text, and turn-based strategy.
 
 ## Features
 - Main menu with Start, How to Play, Credits, and Exit
+- Dedicated instructions page with battle flow, tips, and controls
 - 8 anime-inspired character choices with unique passives
 - 16 Bakugan in the roster with attributes, stats, and signature abilities
 - Team drafting system for both players
@@ -11,6 +12,7 @@ A Python Bakugan battle game with a full menu, character passives, team drafting
 - Energy system for basic attacks and special abilities
 - Items including Potion, Shield, Energy Drink, and Revive
 - Automatic switching when a Bakugan is knocked out
+- Battle animation and presentation effects for attacks and round transitions
 - Win by knocking out all opposing Bakugan or by remaining team power in a tie
 
 ## How to Run
