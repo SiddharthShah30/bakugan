@@ -1,42 +1,62 @@
-# Bakugan Brawlers Game
+# Bakugan: Battle Dimension
 
-A turn-based, text-based Bakugan battle game in Python! Choose your character, build your Bakugan team, and battle your friends with special attacks, items, and strategy.
+A Python Bakugan battle game with a full menu, character passives, team drafting, gate cards, energy-based abilities, items, and turn-based battle strategy.
 
 ## Features
-- **Main Menu**: Start, Instructions, Credits, Exit
-- **Character Selection**: Choose from classic Bakugan characters
-- **Bakugan Roster**: 12+ Bakugan, each with unique stats and special attacks
-- **Battle System**: Turn-based combat with options to attack, use special moves, items, or switch Bakugan
-- **Items**: Potions (heal), Shields (reduce damage)
-- **Victory Conditions**: Fewer knockouts or higher total HP wins
+- Main menu with Start, How to Play, Credits, and Exit
+- 8 anime-inspired character choices with unique passives
+- 16 Bakugan in the roster with attributes, stats, and signature abilities
+- Team drafting system for both players
+- Gate Card system that changes battle conditions each round
+- Energy system for basic attacks and special abilities
+- Items including Potion, Shield, Energy Drink, and Revive
+- Automatic switching when a Bakugan is knocked out
+- Win by knocking out all opposing Bakugan or by remaining team power in a tie
 
-## How to Play
-1. Run `main.py` in your terminal:
+## How to Run
+1. Make sure you have Python 3.7 or newer installed.
+2. Open a terminal in this folder.
+3. Run the game:
    ```bash
    python main.py
    ```
-2. Use the menu to start a new game, read instructions, or view credits.
-3. Each player selects a character and 3 Bakugan for their team.
-4. Take turns choosing actions: Attack, Special, Use Item, or Switch Bakugan.
-5. Use strategy! Each Bakugan has strengths, weaknesses, and a special move.
-6. The player with the last Bakugan standing (or best score) wins!
+
+## How to Play
+1. Start a new battle from the main menu.
+2. Enter both player names.
+3. Choose a character for each player.
+4. Draft 3 Bakugan for each team from the shared roster.
+5. On your turn, choose one of these actions:
+   - Basic Attack
+   - Use Ability
+   - Use Item
+   - Switch Bakugan
+   - View Team
+6. Gate Cards apply round-by-round bonuses and affect strategy.
+7. Continue until one team has no Bakugan left.
+
+## Bakugan and Attributes
+The roster includes Pyrus, Aquos, Subterra, Ventus, Darkus, and Haos Bakugan.
+
+Type advantage follows a simple battle chain:
+- Pyrus beats Aquos
+- Aquos beats Subterra
+- Subterra beats Ventus
+- Ventus beats Darkus
+- Darkus beats Haos
+- Haos beats Pyrus
 
 ## Requirements
 - Python 3.7+
-- No external libraries required
+- No third-party packages required
 
-## Example Bakugan
-- Dragonoid (Pyrus): Dragon Fire
-- Atmos (Pyrus): Meteor Strike
-- Tigrerra (Aquos): Aqua Shield
-- Balista (Aquos): Tidal Wave
-- Centipoid (Subterra): Earthquake
-- Clawsaurus (Subterra): Stone Crush
-- ...and more!
+## Project Files
+- [main.py](main.py) - The game itself
+- [README.md](README.md) - Project overview and instructions
 
 ## Credits
-- Inspired by the Bakugan franchise
-- Developed by: Your Name
+- Fan project inspired by the Bakugan anime series
+- Built for local two-player battles in Python
 
 ## License
-This project is for educational and fan purposes only. Not for commercial use.
+This project is for educational and fan use only.
